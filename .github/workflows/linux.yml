@@ -1,123 +1,66 @@
-name: Linux.
+name: Linux
 
 on:
-  workflow_dispatch:
   push:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/linux.yml'
-      - 'snap/**'
-      - 'Telegram/build/**'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/Resources/winrc/**'
-      - 'Telegram/SourceFiles/platform/win/**'
-      - 'Telegram/SourceFiles/platform/mac/**'
-      - 'Telegram/Telegram/**'
-      - 'Telegram/configure.bat'
-      - 'Telegram/Telegram.plist'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/linux.yml'
-      - 'snap/**'
-      - 'Telegram/build/**'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/Resources/winrc/**'
-      - 'Telegram/SourceFiles/platform/win/**'
-      - 'Telegram/SourceFiles/platform/mac/**'
-      - 'Telegram/Telegram/**'
-      - 'Telegram/configure.bat'
-      - 'Telegram/Telegram.plist'
+    tags:
+      - '*'
 
 jobs:
-
-  linux:
-    name: Rocky Linux 8
+  build:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        defines:
-          - ""
-          - "DESKTOP_APP_DISABLE_X11_INTEGRATION"
-
-    env:
-      UPLOAD_ARTIFACT: "true"
+    container:
+      image: ghazzor/ubuntu-tg:latest
 
     steps:
-      - name: Get repository name.
-        run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+      - name: Update System
+        run: sudo nala upgrade -y
 
-      - name: Clone.
-        uses: actions/checkout@v3.1.0
+      - name: Set Tag Name
+        run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
+
+      - name: Build materialgram
+        run: |
+          [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
+          git clone https://github.com/kukuruzka165/materialgram --recursive -b ${{ env.TAGNAME }} && cd materialgram
+          cmake \
+           -B build \
+           -G Ninja \
+           -DCMAKE_INSTALL_PREFIX="/usr" \
+           -DCMAKE_BUILD_TYPE=Release \
+           -DTDESKTOP_API_ID=27089606 \
+           -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
+           -DDESKTOP_APP_DISABLE_AUTOUPDATE=True \
+           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON 
+          ninja -C build -j$(nproc --all) 
+          mkdir fakeroot && DESTDIR=$(pwd)/fakeroot ninja -C build install && cd fakeroot 
+          tar -czvf materialgram-${{ env.TAGNAME }}.tar.gz usr  
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          submodules: recursive
-          path: ${{ env.REPO_NAME }}
+          name: materialgram-${{ env.TAGNAME }}
+          path: /home/builder/materialgram/fakeroot/materialgram-${{ env.TAGNAME }}.tar.gz
 
-      - name: First set up.
-        run: |
-          docker pull ghcr.io/telegramdesktop/tdesktop/centos_env:latest
-
-      - name: Telegram Desktop build.
-        run: |
-          cd $REPO_NAME
-
-          DEFINE=""
-          if [ -n "${{ matrix.defines }}" ]; then
-            DEFINE="-D ${{ matrix.defines }}=ON"
-            echo Define from matrix: $DEFINE
-            echo "ARTIFACT_NAME=Telegram_${{ matrix.defines }}" >> $GITHUB_ENV
-          else
-            echo "ARTIFACT_NAME=Telegram" >> $GITHUB_ENV
-          fi
-
-          docker run --rm \
-          -v $PWD:/usr/src/tdesktop \
-          -e CONFIG=Debug \
-          tdesktop:centos_env \
-          /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
-          -D CMAKE_C_FLAGS_DEBUG="" \
-          -D CMAKE_CXX_FLAGS_DEBUG="" \
-          -D CMAKE_C_FLAGS="-Werror" \
-          -D CMAKE_CXX_FLAGS="-Werror" \
-          -D CMAKE_EXE_LINKER_FLAGS="-s" \
-          -D TDESKTOP_API_TEST=ON \
-          -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF \
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
-          $DEFINE
-
-      - name: Check.
-        run: |
-          filePath="$REPO_NAME/out/Debug/Telegram"
-          if test -f "$filePath"; then
-            echo "Build successfully done! :)"
-
-            size=$(stat -c %s "$filePath")
-            echo "File size of ${filePath}: ${size} Bytes."
-          else
-            echo "Build error, output file does not exist."
-            exit 1
-          fi
-
-      - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
-        run: |
-          cd $REPO_NAME/out/Debug
-          sudo mkdir artifact
-          sudo mv {Telegram,Updater} artifact/
-      - uses: actions/upload-artifact@master
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+      - name: Upload artifact to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.REPO_NAME }}/out/Debug/artifact/
+          name: ${{ env.TAGNAME }}
+          token: ${{ secrets.PAT }}
+          files: /home/builder/materialgram/fakeroot/materialgram-${{ env.TAGNAME }}.tar.gz
+
+  trigger-workflow:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      
+      - name: Set Tag Name
+        run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
+
+      - name: Trigger repository dispatch event
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.OKsPAT }}
+          repository: materialgram/materialgram-bin
+          event-type: new-release
+          client-payload: '{"tagname": "${{ env.TAGNAME }}", "pkgrel": "1"}'
