@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Update System
-        run: sudo nala upgrade -y
+        run: nala upgrade -y
 
       - name: Set Tag Name
         run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
