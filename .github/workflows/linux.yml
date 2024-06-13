@@ -29,8 +29,8 @@ jobs:
            -DCMAKE_INSTALL_PREFIX="/usr" \
            -DCMAKE_BUILD_TYPE=Release \
            -DTDESKTOP_API_ID=27089606 \
-           -DCMAKE_C_COMPILER=/usr/bin/gcc-14 \
-           -DCMAKE_CXX_COMPILER=/usr/bin/g++-14 \
+           -DCMAKE_C_COMPILER=/usr/bin/clang-18 \
+           -DCMAKE_CXX_COMPILER=/usr/bin/clang++-18 \
            -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
            -DDESKTOP_APP_DISABLE_AUTOUPDATE=True \
            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON 
