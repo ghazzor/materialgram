@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghazzor/ubuntu-tg:latest
+      image: ghazzor/ubuntu-tg:latest-deb
 
     steps:
       - name: Update System
