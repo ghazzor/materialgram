@@ -27,7 +27,7 @@ jobs:
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third_party/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/desktop_capturer/third_party/libyuv
-          export QT_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt5
+          export QT_DIR='/usr/lib/x86_64-linux-gnu/cmake/Qt5'
           cmake \
            -B build \
            -G Ninja \
@@ -35,6 +35,7 @@ jobs:
            -DCMAKE_BUILD_TYPE=Release \
            -DTDESKTOP_API_ID=27089606 \
            -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
+           -DQT_DIR=$QT_DIR \
            -DDESKTOP_APP_DISABLE_AUTOUPDATE=True
           ninja -C build -j$(nproc --all) 
           mkdir fakeroot && DESTDIR=$(pwd)/fakeroot ninja -C build install && cd fakeroot 
