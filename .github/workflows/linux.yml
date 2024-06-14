@@ -27,6 +27,7 @@ jobs:
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third_party/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/desktop_capturer/third_party/libyuv
+          export QT_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt5
           cmake \
            -B build \
            -G Ninja \
