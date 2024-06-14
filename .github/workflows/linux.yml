@@ -24,6 +24,9 @@ jobs:
           update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
           git clone https://github.com/kukuruzka165/materialgram --recursive -b v5.1.5.1 && cd materialgram
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third-party/libyuv
+          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
+          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third_party/libyuv
+          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/desktop_capturer/third_party/libyuv
           cmake \
            -B build \
            -G Ninja \
