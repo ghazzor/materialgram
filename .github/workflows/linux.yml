@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghazzor/ubuntu-tg:latest-deb
+      image: ghazzor/ubuntu-tg:latest
 
     steps:
       - name: Update System
@@ -17,11 +17,17 @@ jobs:
       - name: Set Tag Name
         run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
 
+      - name: Setup Clang/LLVM
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 19
+
       - name: Build materialgram
         run: |
           [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
+          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 60
+          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 60
           git clone https://github.com/kukuruzka165/materialgram --recursive -b v5.1.5.1 && cd materialgram
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third-party/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
@@ -36,6 +42,7 @@ jobs:
            -DTDESKTOP_API_ID=27089606 \
            -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
            -DQT_DIR=$QT_DIR \
+           -DCMAKE_VERBOSE_MAKEFILE=ON \
            -DDESKTOP_APP_DISABLE_AUTOUPDATE=True
           ninja -C build -j$(nproc --all) 
           mkdir fakeroot && DESTDIR=$(pwd)/fakeroot ninja -C build install && cd fakeroot 
