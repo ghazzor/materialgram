@@ -20,6 +20,8 @@ jobs:
       - name: Build materialgram
         run: |
           [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
+          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
+          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
           git clone --depth=1 https://github.com/kukuruzka165/materialgram --recursive -b ${{ env.TAGNAME }} && cd materialgram
           cmake \
            -B build \
