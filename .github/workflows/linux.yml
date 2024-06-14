@@ -47,7 +47,6 @@ jobs:
            -DTDESKTOP_API_ID=27089606 \
            -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
            -DQT_DIR=$QT_DIR \
-           -DCMAKE_VERBOSE_MAKEFILE=ON \
            -DDESKTOP_APP_DISABLE_AUTOUPDATE=True
           ninja -C build -j$(nproc --all) 
           mkdir fakeroot && DESTDIR=$(pwd)/fakeroot ninja -C build install && cd fakeroot 
