@@ -19,16 +19,18 @@ jobs:
 
       - name: Setup Clang/LLVM
         run: |
-          sudo apt install lsb-release wget software-properties-common gnupg -y
+          sudo apt install lsb-release wget gcc-12 g++-12 software-properties-common gnupg -y
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 19
+          sudo ./llvm.sh 18
 
       - name: Build materialgram
         run: |
           [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 60
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 60
+          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
+          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
+          update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+          update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
           git clone https://github.com/kukuruzka165/materialgram --recursive -b v5.1.5.1 && cd materialgram
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third-party/libyuv
           git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
