@@ -21,7 +21,7 @@ jobs:
 
       - name: Build materialgram
         run: |
-          [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder;
+          [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
           git clone --depth=1 https://github.com/kukuruzka165/materialgram --recursive -b ${{ env.TAGNAME }} && cd materialgram
           cmake \
            -B build \
