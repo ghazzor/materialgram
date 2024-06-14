@@ -22,7 +22,7 @@ jobs:
           [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
           update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
           update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
-          cp -r /usr/local/lin/librnnoise.* /usr/lib/
+          cp -r /usr/local/lib/librnnoise.* /usr/lib/
           wget https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
           chmod +x linuxdeployqt-continuous-x86_64.AppImage
           sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
