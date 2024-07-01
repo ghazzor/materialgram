@@ -1,56 +1,104 @@
-name: Linux
+name: Linux.
 
 on:
-  workflow_dispatch:
   push:
+    tags:
+      - '*'
+  workflow_dispatch:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/linux.yml'
+      - 'snap/**'
+      - 'Telegram/build/**'
+      - 'Telegram/Resources/uwp/**'
+      - 'Telegram/Resources/winrc/**'
+      - 'Telegram/SourceFiles/platform/win/**'
+      - 'Telegram/SourceFiles/platform/mac/**'
+      - 'Telegram/Telegram/**'
+      - 'Telegram/configure.bat'
+      - 'Telegram/Telegram.plist'
 
 jobs:
-  build:
+
+  linux:
+    name: Rocky Linux 8
     runs-on: ubuntu-latest
-    container:
-      image: ghazzor/ubuntu-tg:latest-deb
+    
+    strategy:
+      matrix:
+        defines:
+          - ""
+
+    env:
+      UPLOAD_ARTIFACT: "true"
 
     steps:
-      - name: Update System
-        run: apt update && apt upgrade -y
+      - name: Get repository name.
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
 
-      - name: Set Tag Name
-        run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
-
-      - name: Build materialgram
-        run: |
-          [ -d "/home/builder" ] && cd /home/builder || { mkdir -p /home/builder && cd /home/builder; }
-          update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 60
-          update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 60
-          cp -r /usr/local/lib/librnnoise.* /usr/lib/
-          wget https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
-          chmod +x linuxdeployqt-continuous-x86_64.AppImage
-          sudo mv linuxdeployqt-continuous-x86_64.AppImage /usr/local/bin/linuxdeployqt
-          apt install fuse kmod -y
-          modinfo fuse
-          modprobe fuse
-          git clone https://github.com/kukuruzka165/materialgram --recursive -b v5.1.5.1 && cd materialgram
-          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third-party/libyuv
-          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/libyuv
-          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/third_party/libyuv
-          git clone https://chromium.googlesource.com/libyuv/libyuv Telegram/ThirdParty/tgcalls/tgcalls/desktop_capturer/third_party/libyuv
-          cmake \
-           -B build \
-           -G Ninja \
-           -DCMAKE_INSTALL_PREFIX="/usr" \
-           -DCMAKE_BUILD_TYPE=Release \
-           -DTDESKTOP_API_ID=27089606 \
-           -DTDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
-           -DCMAKE_CXX_FLAGS="-Wno-deprecated-declarations" \
-           -DDESKTOP_APP_DISABLE_AUTOUPDATE=True
-          ninja -C build -j$(nproc --all) 
-          mkdir fakeroot && DESTDIR=$(pwd)/fakeroot ninja -C build install && cd fakeroot
-          cp usr/share/applications/io.github.kukuruzka165.materialgram.desktop io.github.kukuruzka165.materialgram.desktop 
-          linuxdeployqt usr/share/applications/io.github.kukuruzka165.materialgram.desktop -appimage
-          ls
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Clone.
+        uses: actions/checkout@v3.1.0
         with:
-          name: materialgram-${{ env.TAGNAME }}
-          path: /home/builder/materialgram/fakeroot/
+          submodules: recursive
+          path: ${{ env.REPO_NAME }}
+
+      - name: First set up.
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login --username ghazzor --password-stdin
+          docker pull ghcr.io/telegramdesktop/tdesktop/centos_env
+          docker tag ghcr.io/telegramdesktop/tdesktop/centos_env tdesktop:centos_env
+
+      - name: materialgram build.
+        run: |
+          cd $REPO_NAME
+
+          DEFINE=""
+          if [ -n "${{ matrix.defines }}" ]; then
+            DEFINE="-D ${{ matrix.defines }}=ON"
+            echo Define from matrix: $DEFINE
+            echo "ARTIFACT_NAME=materialgram_${{ matrix.defines }}" >> $GITHUB_ENV
+          else
+            echo "ARTIFACT_NAME=materialgram" >> $GITHUB_ENV
+          fi
+
+          docker run --rm \
+          -v $PWD:/usr/src/tdesktop \
+          -e DEBUG=1 \
+          tdesktop:centos_env \
+          /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+          -D CMAKE_EXE_LINKER_FLAGS="-s" \
+          -D TDESKTOP_API_ID=${{ secrets.API_ID }} \
+          -D TDESKTOP_API_HASH=${{ secrets.API_HASH}} \
+          -D DESKTOP_APP_DISABLE_AUTOUPDATE=True \
+          $DEFINE
+          
+      - name: Check.
+        run: |
+          filePath="$REPO_NAME/out/Release/materialgram"
+          if test -f "$filePath"; then
+            echo "Build successfully done! :)"
+
+            size=$(stat -c %s "$filePath")
+            echo "File size of ${filePath}: ${size} Bytes."
+          else
+            echo "Build error, output file does not exist."
+            exit 1
+          fi
+
+      - name: Move artifact.
+        if: env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          cd $REPO_NAME/out/Release
+          mkdir artifact
+          mv materialgram artifact/
+      - uses: actions/upload-artifact@master
+        if: env.UPLOAD_ARTIFACT == 'true'
+        name: Upload artifact.
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.REPO_NAME }}/out/Release/artifact/
