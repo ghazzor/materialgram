@@ -49,7 +49,7 @@ jobs:
 
       - name: First set up.
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login --username ghazzor --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login --username ghazzor --password-stdin
           docker pull ghcr.io/telegramdesktop/tdesktop/centos_env
           docker tag ghcr.io/telegramdesktop/tdesktop/centos_env tdesktop:centos_env
 
