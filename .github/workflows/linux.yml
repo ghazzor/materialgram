@@ -62,6 +62,11 @@ jobs:
           docker pull ghcr.io/telegramdesktop/tdesktop/centos_env
           docker tag ghcr.io/telegramdesktop/tdesktop/centos_env tdesktop:centos_env
 
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 12
+
       - name: materialgram build.
         run: |
           cd $REPO_NAME
