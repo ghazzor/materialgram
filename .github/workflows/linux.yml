@@ -16,9 +16,6 @@ jobs:
       - name: Cleanup
         uses: rokibhasansagar/slimhub_actions@main
 
-      - name: Set Tag Name
-        run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
-
       - name: Install Docker
         run: |
           sudo apt install docker.io
@@ -38,7 +35,9 @@ jobs:
 
       - name: clone
         run: |
-          git clone https://github.com/kukuruzka165/materialgram --recursive -b ${{ env.TAGNAME }} tdesktop 
+          git clone https://github.com/kukuruzka165/materialgram --recursive -b main tdesktop
+          export TAG=$(git tag --sort=committerdate | grep -E '[0-9]' | tail -1 | cut -b 2-v)
+          git checkout v$TAG 
       
       - name: materialgram build.
         run: |
