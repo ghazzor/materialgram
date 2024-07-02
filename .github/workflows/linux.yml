@@ -5,50 +5,19 @@ on:
     tags:
       - '*'
   workflow_dispatch:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-      - 'changelog.txt'
-      - 'LEGAL'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/linux.yml'
-      - 'snap/**'
-      - 'Telegram/build/**'
-      - 'Telegram/Resources/uwp/**'
-      - 'Telegram/Resources/winrc/**'
-      - 'Telegram/SourceFiles/platform/win/**'
-      - 'Telegram/SourceFiles/platform/mac/**'
-      - 'Telegram/Telegram/**'
-      - 'Telegram/configure.bat'
-      - 'Telegram/Telegram.plist'
 
 jobs:
 
   linux:
     name: Rocky Linux 8
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        defines:
-          - ""
-
-    env:
-      UPLOAD_ARTIFACT: "true"
 
     steps:
-      - name: Get repository name.
-        run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
-
       - name: Cleanup
         uses: rokibhasansagar/slimhub_actions@main
 
-      - name: Clone.
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          path: ${{ env.REPO_NAME }}
+      - name: Set Tag Name
+        run: echo "TAGNAME=$(echo ${{ github.ref }} | cut -d '/' -f3)" >> $GITHUB_ENV 
 
       - name: Install Docker
         run: |
@@ -67,52 +36,33 @@ jobs:
         with:
           swap-size-gb: 12
 
+      - name: clone
+        run: |
+          git clone https://github.com/kukuruzka165/materialgram --recursive -b ${{ env.TAGNAME }} tdesktop 
+      
       - name: materialgram build.
         run: |
-          cd $REPO_NAME
-
-          DEFINE=""
-          if [ -n "${{ matrix.defines }}" ]; then
-            DEFINE="-D ${{ matrix.defines }}=ON"
-            echo Define from matrix: $DEFINE
-            echo "ARTIFACT_NAME=materialgram_${{ matrix.defines }}" >> $GITHUB_ENV
-          else
-            echo "ARTIFACT_NAME=materialgram" >> $GITHUB_ENV
-          fi
-
+          cd tdesktop
           docker run --rm \
           -v $PWD:/usr/src/tdesktop \
-          -e tdesktop:centos_env \
+          -e CONFIG=Release \ 
+          tdesktop:centos_env \
           /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
           -D CMAKE_EXE_LINKER_FLAGS="-s" \
           -D TDESKTOP_API_ID=27089606 \
           -D TDESKTOP_API_HASH=d14ed11b1ec58dfe89233e976834ea73 \
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=True \
-          -D -DCMAKE_BUILD_TYPE=Release \
-          $DEFINE
+          -D -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           
       - name: Check.
         run: |
-          filePath="$REPO_NAME/out/Release/materialgram"
-          if test -f "$filePath"; then
-            echo "Build successfully done! :)"
+          [ ! -e "tdesktop/out/Release/materialgram" ] && \
+          echo "BUILD FAILED" && \
+          exit 1
 
-            size=$(stat -c %s "$filePath")
-            echo "File size of ${filePath}: ${size} Bytes."
-          else
-            echo "Build error, output file does not exist."
-            exit 1
-          fi
-
-      - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
-        run: |
-          cd $REPO_NAME/out/Release
-          mkdir artifact
-          mv materialgram artifact/
-      - uses: actions/upload-artifact@master
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.REPO_NAME }}/out/Release/artifact/
+          name: mat
+          path: tdesktop/out/Release/materialgram
+          compression-level: 1
