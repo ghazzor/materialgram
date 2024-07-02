@@ -35,7 +35,7 @@ jobs:
 
       - name: clone
         run: |
-          git clone https://github.com/kukuruzka165/materialgram --recursive -b main tdesktop
+          git clone https://github.com/kukuruzka165/materialgram --recursive -b main tdesktop && cd tdesktop
           export TAG=$(git tag --sort=committerdate | grep -E '[0-9]' | tail -1 | cut -b 2-v)
           git checkout v$TAG 
       
